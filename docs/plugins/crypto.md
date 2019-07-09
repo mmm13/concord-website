@@ -24,7 +24,7 @@ A SSH key pair, [stored in the secrets store](../api/secret.html) can
 be exported as a pair of files into a process' working directory:
 
 ```yaml
-- ${crypto.exportKeyAsFile('Default', 'myKey', 'myKeyPassword')}
+- ${crypto.exportKeyAsFile('myOrg', 'myKey', 'myKeyPassword')}
 ```
 
 This expression returns a map with two keys:
@@ -50,7 +50,7 @@ And subsequently exports the key in the default flow.
 ```yaml
 flows:
   default:
-  - expr: ${crypto.exportKeyAsFile('Default', 'myKey', 'myKeyPassword')}
+  - expr: ${crypto.exportKeyAsFile('myOrg', 'myKey', 'myKeyPassword')}
     out: myKeys
   - log: "Public: ${myKeys.public}"
   - log: "Private: ${myKeys.private}"
@@ -65,12 +65,12 @@ The keypair password itself can be encrypted using a
 Credentials, so username and password pairs, can be exported with:
 
 ```yaml
-- ${crypto.exportCredentials('Default', 'myCredentials', 'myPassword')}
+- ${crypto.exportCredentials('myOrg', 'myCredentials', 'myPassword')}
 ```
 
 If it's a non password-protected secret, use `null` instead of password:
 ```yaml
-- ${crypto.exportCredentials('Default', 'myCredentials', null)}
+- ${crypto.exportCredentials('myOrg', 'myCredentials', null)}
 ```
 
 The expression returns a map with two keys:
@@ -79,7 +79,7 @@ The expression returns a map with two keys:
 
 You can store the return value in a variable:
 ```yaml
-- expr: ${crypto.exportCredentials('Default', 'myCredentials', null)}
+- expr: ${crypto.exportCredentials('myOrg', 'myCredentials', null)}
   out: myCreds
 
 - log: "Username: ${myCreds.username}"
@@ -90,7 +90,7 @@ Or use it directly. For example, in a `http` task call:
 ```yaml
 - task: http
   in:
-    auth: ${crypto.exportCredentials('Default', 'myCredentials', null)}
+    auth: ${crypto.exportCredentials('myOrg', 'myCredentials', null)}
   # ...
 ```
 
@@ -106,14 +106,14 @@ $ curl -u myusername -F name=mySecret -F type=data -F data="my value" -F storePa
 ```
 
 ```yaml
-- log: "${crypto.exportAsString('Default', 'mySecret', 'myPassword')}"
+- log: "${crypto.exportAsString('myOrg', 'mySecret', 'myPassword')}"
 ```
 
 In this example, `my value` will be printed in the log.
 
 Alternatively, the `crypto` task provides a method to export plain secrets as files:
 ```yaml
-- log: "${crypto.exportAsFile('Default', 'mySecret', 'myPassword')}"
+- log: "${crypto.exportAsFile('MyOrg', 'mySecret', 'myPassword')}"
 ```
 
 The method returns a path to the temporary file containing the
@@ -152,6 +152,14 @@ The result returns the encrypted value in the `data` element:
 The value of `data` field can be used as a process variable by adding it as an
 attribute in the Concord file, in the project's configuration or can be supplied 
 to a specific process execution in the  request JSON.
+
+A value can also be encrypted within a Concord Process with the `encryptString`
+method of the `crypto` task:
+
+```yaml
+- expr: ${crypto.encryptString('MyOrg', 'MyProject', 'my secret value')}
+  out: encryptedValue
+```
 
 A value can be encrypted and decrypted only by the same server.
 

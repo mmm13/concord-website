@@ -12,6 +12,24 @@ running processes.
 The task is provided automatically for all flows, no external dependencies
 necessary.
 
+- [Examples](#examples)
+- [Parameters](#parameters)
+- [Starting a Process using a Payload Archive](#start-payload)
+- [Starting a Process using an Existing Project](#start-project)
+- [Starting an External Process](#start-external)
+- [Scheduling a Process](#start-schedule)
+- [Specifying Profiles](#start-profiles)
+- [File Attachments](#start-attachments)
+- [Output Variables](#start-outvars)
+- [Forking a Process](#fork)
+- [Forking Multiple Instances](#fork-multi)
+- [Synchronous Execution](#sync)
+- [Suspending Parent Process](#start-suspend)
+- [Waiting for Completion](#wait-for-completion)
+- [Handling Cancellation and Failures](#handle-onfailure)
+- [Cancelling Processes](#cancel)
+- [Tagging Subprocesses](#tags)
+
 ## Examples
 
 - [process_from_a_process]({{ site.concord_source }}/tree/master/examples/process_from_a_process) 
@@ -25,7 +43,7 @@ necessary.
 All parameter sorted alphabetically. Usage documentation can be found in the
 following sections:
 
-- `action` - string, name of the action (`start`, `fork`, `kill`);
+- `action` - string, name of the action (`start`, `startExternal`, `fork`, `kill`);
 - `activeProfiles` - list of string values, profiles to activate; 
 - `arguments` - input arguments of the starting processes;
 - `disableOnCancel` - boolean, disable `onCancel` flow in forked processes;
@@ -39,10 +57,19 @@ organization of the calling process;
 - `payload` - path to a ZIP archive or a directory, the process' payload;
 - `project` - string, name of the process' project;
 - `repo` - string, name of the project's repository to use;
+- `repoBranchOrTag` - string, overrides the configured branch or tag name of
+the project's repository;
+- `repoCommitId` - string, overrides the configured GIT commit ID of the
+project's repository;
 - `startAt` - [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) date/time
 value, the process' start time;
+- `suspend` - boolean, if `true` and `sync` is enabled the process [suspends](#start-suspend)
+waiting for the child process to complete (only for `action: "start"`); 
 - `sync` - boolean, wait for completion if `true`, defaults to `false`;
-- `tags` - list of string values, the process' tags.
+- `tags` - list of string values, the process' tags;
+- `attachments` - list of file attachments;
+
+<a name="start-payload"/>
 
 ## Starting a Process using a Payload Archive
 
@@ -62,6 +89,8 @@ The ID of the started process is stored as the first element of `${jobs}` array:
 ```yaml
 - log: "I've started a new process: ${jobs[0]}"
 ```
+
+<a name="start-project"></a>
 
 ## Starting a Process using an Existing Project
 
@@ -96,6 +125,31 @@ flows:
 The process is started using the resources provided by the specified archive, 
 project and repository.
 
+<a name="start-external"/>
+
+## Starting an External Process
+
+To start a process on an external Concord instance use the `startExternal` action:
+
+```yaml
+flows:
+  default:
+  - task: concord
+    in:
+      baseUrl: http://another.concord.example.com:8001
+      apiKey: "myApiKey"
+      action: startExternal
+      project: myProject
+      repo: myRepo
+```
+
+Connection parameters can be overridden using the following keys:
+- `baseUrl` - Concord REST API endpoint. Defaults to the current
+  server's API endpoint address;
+- `apiKey` - user's REST API key.
+
+<a name="start-schedule"/>
+
 ## Scheduling a Process
 
 To schedule a process to a specific date and time, use the `startAt` parameter:
@@ -113,6 +167,8 @@ flows:
 The `startAt` parameter accepts an ISO-8601 string, `java.util.Date` or
 `java.util.Calendar` values. It is important to include a timezone as the
 server may use a different default timezone value.
+
+<a name="start-profiles"/>
 
 ## Specifying Profiles
 
@@ -132,6 +188,34 @@ flows:
 ```
 
 The parameter accepts either a YAML array or a comma-separated string value.
+
+<a name="start-attachments"/>
+
+## File Attachments
+
+To start a process with file attachments, use the `attachments` parameter. An
+attachment can be a single path to a file, or a map which specifies a source
+and destination filename for the file. If the attachment is a single path, the
+file will be placed in the root directory of the new process with the same name.
+
+```yaml
+flows:
+  default:
+  - task: concord
+    in:
+      ...
+      attachments:
+      - ${workDir}/someDir/myFile.txt
+      - src: anotherFile.json
+        dest: someFile.json
+```
+
+This is equivalent to the curl command:
+```
+curl ... -F myFile.txt=@${workDir}/someDir/myFile.txt -F someFile.json=@anotherFile.json ...
+```
+
+<a name="start-outvars"/>
 
 ## Output Variables
 
@@ -159,6 +243,8 @@ Output values are stored as a `jobOut` variable:
 - log: "We got ${jobOut.someVar1} and ${jobOut.someVar2}!"
 ```
 
+<a name="fork"/>
+
 ## Forking a Process
 
 Forking a process creates a copy of the current process. All variables and
@@ -179,8 +265,10 @@ flows:
 
 The IDs of the started processes are stored as `${jobs}` array.
 
-**Note** Due to the current limitations, variables and files created
-after the start of a process cannot be copied to child processes.
+**Note** Due to the current limitations, files created after
+the start of a process cannot be copied to child processes.
+
+<a name="fork-multi"/>
 
 ## Forking Multiple Instances
 
@@ -209,6 +297,8 @@ flows:
 The `instances` parameter allows spawning of more than one copy of a process.
 
 The IDs of the started processes arestored as `${jobs}` array.
+
+<a name="sync"/>
 
 ## Synchronous Execution
 
@@ -239,6 +329,40 @@ flows:
       ignoreFailures: true
 ```
 
+<a name="start-suspend"/>
+
+## Suspending Parent Process
+
+There's an option to suspend the parent process while it waits for the child process
+completion:
+
+```yaml
+flows:
+  default:
+  - task: concord
+    in:
+      action: start
+      org: myOrg
+      project: myProject
+      repo: myRepo
+      sync: true
+      suspend: true
+      
+  - log: "Done: ${jobs}"
+```
+
+This can be very useful to reduce the amount of Concord agents needed. With
+`suspend: true`, the parent process does not consume any resources including
+agent workers, whil waiting for the child process.
+
+Currently, `suspend` can only be used with the `start` action.
+
+**Note:** Due to the current limitations, files created after the start of
+the parent process are not preserved. Effectively, the suspend works in the same
+way as the [forms](../getting-started/forms.html).
+
+<a name="wait-for-completion"/>
+
 ## Waiting for Completion
 
 To wait for a completion of a process:
@@ -259,6 +383,8 @@ The expression returns a map of process statuses:
   "5cd83364-a775-11e7-aadd-53da44242629": "FAILED"
 }
 ```
+
+<a name="handle-onfailure"/>
 
 ## Handling Cancellation and Failures
 
@@ -290,6 +416,8 @@ flows:
   - log: "Handling a failure..."
 ```
 
+<a name="cancel"/>
+
 ## Cancelling Processes
 
 The `cancel` action can be used to cancel the execution of a subprocess.
@@ -309,6 +437,8 @@ IDs.
 
 Setting `sync` to `true` forces the the task to wait until the specified processes
 are stopped.
+
+<a name="tags"/>
 
 ## Tagging Subprocesses
 
@@ -339,25 +469,4 @@ flows:
     in:
       action: kill
       instanceId: "${concord.listSubprocesses(parentInstanceId, 'someTag')}"
-```
-
-## Connection Parameters
-
-By default, the task uses the same Concord instance and user that
-started the flow.
-
-Connection parameters can be overridden using the following keys:
-- `baseUrl` - Concord REST API endpoint. Defaults to the current
-  server's API endpoint address;
-- `apiKey` - user's REST API key.
-
-For example:
-
-```yaml
-flows:
-  default:
-  - task: concord
-    in:
-      baseUrl: "http://concord.example.com:8001"
-      apiKey: "lzfJQL4u2gsH7toQveFYSQ"
 ```

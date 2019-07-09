@@ -154,7 +154,46 @@ which were updated in GitHub. By default the current project/repository is trigg
 - `commitId` - ID of the commit which triggered the notification;
 - `useInitiator` - process initiator is set to `author` when this attribute is marked as `true`
 
-The connection to the GitHub deployment needs to be 
+The following example trigger fires when someone pushes to a development branch
+with a name starting with `dev-`, e.g. `dev-my-feature`, `dev-bugfix`, and
+ignores pushes on branch deletes:
+
+```yaml
+- github:
+    type: push
+    useInitiator: true
+    entryPoint: devPushFlow
+    branch: '^dev-.*$'
+    payload:
+      deleted: false
+```
+
+The next example trigger only fires on pull requests that have the label `bug`:
+
+```yaml
+- github:
+    type: pull_request
+    useInitiator: true
+    entryPoint: pullRequestFlow
+    payload:
+      pull_request:
+        labels:
+        - { name: "bug" }
+```
+
+The following example trigger fires when someone pushes/merges into master, but
+ignores pushes by `jenkinspan` and `anothersvc`:
+
+```yaml
+- github: 
+    type: push
+    useInitiator: true
+    entryPoint: mainPushFlow
+    branch: 'master'
+    author: '^(?!.*(jenkinspan|anothersvc)).*$'
+```
+
+The connection to the GitHub deployment needs to be
 [configured globally](./configuration.html#github).
 
 <a name="scheduled"/>
@@ -211,7 +250,7 @@ You can use any of the TZ values from the
 
 Each trigger execution receives an `event` object with the properties `event.fireAt`
 and `event.spec` as well as any additional arguments supplied in the
-configuration: 
+configuration (e.g. `arguments` or `activeProfiles`): 
 
 ```yaml
 flows:
@@ -221,6 +260,8 @@ triggers:
 - cron:
     spec: "* 12 * * *"
     entryPoint: eventOutput
+    activeProfiles:
+    - myProfile
     arguments:
       name: "Concord"
 ```
@@ -230,6 +271,7 @@ operations,  batch reporting or processing and other repeating task that are
 automated via a Concord flow.
 
 <a name="generic"/>
+
 ## Generic Triggers
 
 You can configure generic triggers to respond to events that are configured to

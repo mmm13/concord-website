@@ -25,6 +25,7 @@ response object can be stored in an `out` parameter for later usage.
 - [Examples](#examples)
 
 <a name="usage"/>
+
 ## Usage and Configuration
 
 As with all tasks you can invoke the HTTP task with a short inline syntax or 
@@ -58,7 +59,10 @@ All parameters sorted in alphabetical order.
 - `auth`: authentication used for secure endpoints, details in 
   [Basic authentication](#basic-authentication);
 - `body`: the request body, details in [Body](#body);
+- `debug`: boolean, output the request and response data in the logs
 - `headers`: add additional headers, details in [Headers](#headers)
+- `ignoreErrors`: boolean, instead of throwing exceptions on unauthorized requests, 
+  return the result object with the error
 - `method`: HTTP request method, either `POST`, `PUT`, `PATCH`, `GET`, or `DELETE`
 - `out`: variable to store the [HTTP response](#http-task-response) object
 - `request`: type of request data `string`, `json`, or `file`, details available
@@ -70,7 +74,10 @@ All parameters sorted in alphabetical order.
 - `socketTimeout`: socket timeout in ms, which is the maximum time of inactivity
 between two data packets. Default value is `-1`, which means that the default
 value of the Java Runtime Environment running the process is used - common value
-is 60000 ms.
+is 60000 ms;
+- `proxy`: HTTP(s) proxy to use (see the [example](#proxy-usage)).
+- `requestTimeout`: request timeout in ms, which is the maximum time spent 
+waiting for the response.
 
 ### Basic Authentication
 
@@ -163,7 +170,7 @@ Types supported currently:
 
 ### Response Type
 
-`response` is a mandatory parameter that maps to the `ACCEPT` header of the HTTP
+`response` is an optional parameter that maps to the `ACCEPT` header of the HTTP
 request.
 
 Types supported currently:
@@ -275,4 +282,16 @@ Using Basic Authentication with a username and a password:
 - if: ${jsonResponse.success}
   then:
    - log: "Response received: ${jsonResponse.content}"
+```
+
+<a name="proxy-usage"/>
+
+#### Proxy Usage
+
+```yaml
+- task: http
+  in:    
+    method: GET
+    url: "https://api.example.com:port/path/endpoint"
+    proxy: "http://proxy.example.com:8080"
 ```

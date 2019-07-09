@@ -22,8 +22,13 @@ task.
   - [Close a Pull Request](#closePR)
   - [Create a Tag](#tag)
   - [Merge Branches](#github-merge)
+  - [Fork a Repo](#fork)
+  - [Get Branch List](#getBranchList)
+  - [Get Tag List](#getTagList)
+  - [Get Latest Commit SHA](#getLatestSHA)
   
 <a name="usage"/>
+
 ## Usage
 
 To be able to use the plugin in a Concord flow, it must be added as a
@@ -39,6 +44,7 @@ This adds the Git plugin to the classpath and allows you to invoke the
 [Git task](#git-task) or the [GitHub task](#github-task).
 
 <a name="git"/>
+
 ## Git Task
 
 The `git` task allows users to trigger git operations as a step of a flow. The
@@ -61,6 +67,9 @@ operations:
 - `secretName` of the `privateKey` parameter: Required - the name of the Concord
   [secret](../api/secret.html) used for the SSH connection to the git 
   repository on the remote server.
+- `ignoreErrors`: instead of throwing exceptions on operation failure, returns
+  the result object with the error, if set to `true`.
+- `out`: variable to store the [Git task response](#response).
 
 Following is an example showing the common parameters with private key based authentication:
 
@@ -79,7 +88,7 @@ flows:
 
 <a name="basic-authentication"/>
 
-### Basic Authentication
+## Basic Authentication
 
 The `auth` parameter is required when a private git repository is accessed with
 HTTPS `url`. It must contain a `basic` nested element which contains either the
@@ -110,7 +119,19 @@ auth:
     token: base64_encoded_auth_token
 ```
 
+<a name="response"/>
+
+### Git Task Response
+
+The `git` task returns a result object with following fields:
+
+- `ok`: `true` if the operation succeeded.
+- `status`: `NO_CHANGES` if repository is clean, otherwise returns `SUCCESS` or
+`FAILURE` if operation successful or failed respectively.
+- `error`: error message if operation failed.
+
 <a name="clone"/>
+
 ### Clone a Repository
 
 The `clone` action of the `git` task can be used to clone a git repository into
@@ -131,6 +152,12 @@ flows:
         org: myOrg
         secretName: mySecret
       baseBranch: feature-a
+      out: response
+      ignoreErrors: true
+
+  - if: "${!response.ok}"
+      then:
+       - log: "Clone action failed: ${response.error}"
 ```
 
 The `baseBranch` parameter is optional and specifies the name of the branch to
@@ -138,6 +165,7 @@ use check out after the clone operation. If not provided, the default branch of
 the repository is used - typically called `master`.
 
 <a name="commit-push"/>
+
 ### Commit and Push Changes
 
 The `commit` action of the `git` task can be used to commit your changes made on
@@ -159,6 +187,11 @@ action, so make sure `clone` action is performed first.
       commitUsername: myUserId
       commitEmail: myEmail
       pushChanges: true
+      out: response
+
+- if: "${response.ok}"
+      then:
+       - log: "Commit action completed successfully."
 ```
 
 The `baseBranch` parameter is mandatory and specifies the name of the branch to
@@ -167,8 +200,8 @@ commit operataion. The `pushChanges` parameter is optional and defaults to
 `false`, when omitted. The `commitUsername` and `commitEmail` are mandatory
 parameters to capture committer details.
 
-
 <a name="branch"/>
+
 ## Create and Push a New Branch
 
 The `createBranch` action of the `git` task allows the creation of a new
@@ -199,9 +232,15 @@ flows: default:
       baseBranch: master
       newBranch: feature-b
       pushBranch: true
+      out: response
+
+  - if: "${response.ok}"
+        then:
+         - log: "Create-branch action completed successfully."
 ```
 
 <a name="merge"/>
+
 ## Merge Branches
 
 The `merge` action of the `git` task can be used to merge branches using the
@@ -228,6 +267,11 @@ flows:
         secretName: mySecret
       sourceBranch: feature-a
       destinationBranch: master
+      out: response
+
+  - if: "${response.ok}"
+          then:
+           - log: "Merge action completed successfully."
 ```
 
 We recommend using the [merge action of the GitHub task](#github-merge) to merge
@@ -235,8 +279,9 @@ branches in large repositories, since no local cloning is required and the
 action is therefore completed faster.
 
 <a name="github"/>
+
 ## GitHub Task
-      
+
 The `github` task of the git plugin allows you to trigger git operations on a
 git repository hosted on [GitHub.com](https://github.com/) or a GitHub
 Enterprise server as a step of a flow.
@@ -285,7 +330,8 @@ flows:
 Examples below take advantage of a globally configured `apiUrl`.
 
 <a name="pr"/>
-## Create and Merge a Pull Request 
+
+## Create and Merge a Pull Request
 
 The `createPr` and `mergePr` actions of the `github` task allow the creation and
 merging a pull request in GitHub. Executed one after another, the tasks can be
@@ -302,7 +348,6 @@ The following parameters are needed by the `createPr` action:
 
 The example below creates a pull request to merge the changes from branch
 `feature-a` into the `master` branch:
-
 
 ```yaml
 flows:
@@ -340,6 +385,7 @@ flows:
 ```
 
 <a name="commentPR">
+
 ## Comment on a Pull Request
 
 The `commentPR` action can be used to add a comment to a pull request.
@@ -367,6 +413,7 @@ flows:
 ```
 
 <a name="closePR"/>
+
 ## Close a Pull Request
 
 The `closePR` action can be used to close a pull request. The pull request
@@ -388,6 +435,7 @@ flows:
 ```
 
 <a name="tag"/>
+
 ## Create a Tag
 
 The `createTag` action of the `github` task can create a tag based on a specific
@@ -420,6 +468,7 @@ flows:
 ```
 
 <a name="github-merge"/>
+
 ## Merge Branches
 
 The `merge` action of the `github` task can merge two branches of a repository
@@ -453,3 +502,108 @@ flows:
       commitMessage: "Automated merge performed by Concord flow."
 ```
 
+<a name="fork"/>
+
+## Fork
+
+The `forkRepo` action can be used to fork a git repository on GitHub. By
+default, the `repo` is forked into your personal account asscociated with the
+`accessToken`.
+
+The following parameters are needed in addition to the general parameters:
+
+- `org`: Required, name of GitHub organization where your repository is located
+- `repo`: Required, name of GitHub repository that you want to fork
+- `targetOrg`: optional, if a value is specified the repository is forked into
+  specified organization, otherwise the target is the personal space of the user
+  specified with the `accessToken`
+
+```yaml
+flows:
+  default:
+  - task: github
+    in:
+      action: forkRepo
+      accessToken: myGitToken
+      org: myOrg
+      repo: myRepo
+      targetOrg: myforkToOrg
+```
+
+<a name="getBranchList"/>
+
+## GetBranchList
+
+The `getBranchList` action can be used to get the list of  branches of a GitHub
+repository. The output of the action is stored in a variable `branchList`. It
+can used at later point in the flow
+
+The following parameters are needed in addition to the general parameters:
+
+- `org`: Required, name of GitHub organization where your repository is located
+- `repo`: Required, name of GitHub repository for which you want to get the
+  branch list
+
+```yaml
+flows:
+  default:
+  - task: github
+    in:
+      action: getBranchList
+      accessToken: myGitToken
+      org: myOrg
+      repo: myRepo
+```
+
+<a name="getTagList"/>
+
+## GetTagList
+
+The `getTagList` action can be used to get the  list of tags of a GitHub
+repository. The output of the action is stored in a variable `tagList`. It can
+used at later point in the flow.
+
+The following parameters are needed in addition to the general parameters:
+
+- `org`: Required, name of GitHub organization where your repository is located
+- `repo`: Required, name of GitHub repository for which you want to get the tag
+  list
+
+```yaml
+flows:
+  default:
+  - task: github
+    in:
+      action: getTagList
+      accessToken: myGitToken
+      org: myOrg
+      repo: myRepo
+```
+
+<a name="getLatestSHA"/>
+
+## GetLatestSHA
+
+The `getLatestSHA` action can be used to get the SHA identifier of latest commit
+for a given branch. By default, it gets the SHA from the `master` branch. The
+output of the action is stored in the variable `latestCommitSHA`. It can used at
+later point in the flow.
+
+The following parameters are needed in addition to the general parameters:
+
+- `org`: Required, name of GitHub organization where your repository is located
+- `repo`: Required, name of GitHub repository
+- `branch`: name of Github branch from which you want to get the latest commit
+  SHA. Defaults to `master`
+
+```yaml
+flows:
+  default:
+  - task: github
+    in:
+      action: getLatestSHA
+      accessToken: myGitToken
+      org: myOrg
+      repo: myRepo
+      branch: myBranch
+```

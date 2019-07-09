@@ -25,16 +25,25 @@ create a `json` object.
       out: jsonObj
     # we can now use it like a simple object
     - log: ${jsonObj.any_key}
-    ```
+```
 
 The `asString` method can read a file resource and create a `string` object with
 the content.
 
 ```yaml
-- log: ${resource.asString(sample-file.txt)}
+- log: ${resource.asString('sample-file.txt')}
 ```
 
-The ``asYaml` method supports reading files using the YAML format.
+The `asYaml` method supports reading files using the YAML format.
+
+```yaml
+- flows:
+    default:
+    - expr: ${resource.asYaml('sample-file.yml')}
+      out: ymlObj
+    # we can now use it like a simple object
+    - log: ${ymlObj.any_key}
+```
 
 ## Writing a Resource
 
@@ -63,3 +72,24 @@ The `writeAsYaml` method supports the YAML format.
 The `writeAs*` methods return the path of the newly created file as
 result. These values can be stored in a variable later be used to read content
 back into the process with the read methods.
+
+## Pretty Format
+
+The `prettyPrintJson` method of the `resource` task allows you to create a
+version of a JSON string or an object, that is better readable in a log or other
+output.
+
+```yaml
+- log: ${resource.prettyPrintJson('{"testKey":"testValue"}')}
+```
+
+```yaml
+- flows:
+    default:
+    - set:
+       newObj:
+        name: testName
+        type: testType
+    - log: ${resource.prettyPrintJson(newObj)}  
+```
+

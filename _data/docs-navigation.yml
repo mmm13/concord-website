@@ -3,7 +3,7 @@ nav:
     id: getting-started
     collapse: /docs/getting-started
     subfolderitems:
-      - page: Introduction
+      - page: Overview
         context: /docs/getting-started/index
       - page: Installation
         context: /docs/getting-started/installation
@@ -15,6 +15,8 @@ nav:
         context: /docs/getting-started/concord-dsl
       - page: Processes
         context: /docs/getting-started/processes
+      - page: Projects
+        context: /docs/getting-started/projects
       - page: Forms
         context: /docs/getting-started/forms
       - page: Scripting
@@ -25,10 +27,28 @@ nav:
         context: /docs/getting-started/tasks
       - page: Organizations and Teams
         context: /docs/getting-started/orgs
+      - page: Policies
+        context: /docs/getting-started/policies
       - page: Triggers
         context: /docs/getting-started/triggers
       - page: Development
         context: /docs/getting-started/development
+  - title: Console
+    id: console
+    collapse: /docs/console
+    subfolderitems:
+      - page: Overview
+        context: /docs/console/index
+      - page: Organization
+        context: /docs/console/organization
+      - page: Secret
+        context: /docs/console/secret
+      - page: Project
+        context: /docs/console/project
+      - page: Repository
+        context: /docs/console/repository
+      - page: Process
+        context: /docs/console/process
   - title: API
     id: api
     collapse: /docs/api
@@ -41,6 +61,8 @@ nav:
         context: /docs/api/inventory
       - page: Organization
         context: /docs/api/org
+      - page: Policy
+        context: /docs/api/policy
       - page: Process
         context: /docs/api/process
       - page: Project
@@ -63,46 +85,38 @@ nav:
     subfolderitems:
       - page: Ansible
         context: /docs/plugins/ansible
-      - page: Automaton
-        context: /docs/plugins/automaton
-      - page: Boo
-        context: /docs/plugins/boo
       - page: Concord
         context: /docs/plugins/concord
       - page: Crypto
         context: /docs/plugins/crypto
+      - page: Datetime
+        context: /docs/plugins/datetime
       - page: Docker
         context: /docs/plugins/docker
       - page: Git and GitHub
         context: /docs/plugins/git
-      - page: Helm
-        context: /docs/plugins/helm
+      - page: Gremlin
+        context: /docs/plugins/gremlin
       - page: HTTP
         context: /docs/plugins/http
+      - page: Jenkins
+        context: /docs/plugins/jenkins
       - page: Jira
         context: /docs/plugins/jira
       - page: Key Value
         context: /docs/plugins/key-value
-      - page: Kubectl
-        context: /docs/plugins/kubectl
-      - page: KubeInventory
-        context: /docs/plugins/kube-inventory
-      - page: Kustomize
-        context: /docs/plugins/kustomize
       - page: LDAP
         context: /docs/plugins/ldap
-      - page: Looper
-        context: /docs/plugins/looper
-      - page: OneOps
-        context: /docs/plugins/oneops
       - page: Resource
         context: /docs/plugins/resource
       - page: Slack
         context: /docs/plugins/slack
       - page: SMTP
         context: /docs/plugins/smtp
-      - page: Tekton
-        context: /docs/plugins/tekton
+      - page: Taurus
+        context: /docs/plugins/taurus
+      - page: Terraform
+        context: /docs/plugins/terraform
   - title: Templates
     id: templates
     collapse: /docs/templates

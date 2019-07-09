@@ -10,7 +10,7 @@ The `slack` plugin supports interaction with the [Slack](https://slack.com/)
 messaging platform.
 
 - posting messages to a channel with the [slack task](#slack)
-- working with channels and groups with the [slackChannel tast](#slack-channel)
+- working with channels and groups with the [slackChannel task](#slack-channel)
 
 ## Configuration
 
@@ -36,17 +36,50 @@ flows:
         channelId: "exampleId"
         username: "anyCustomString"
         iconEmoji: ":information_desk_person:"
-        text: "Starting execution on Concord"
-    - log: "Default flow running"
-    - ${slack.call("exampleId", "Another message")}
+        text: "Starting execution on Concord, process ID ${txId}"
+
+    - if: "${!result.ok}"
+      then:
+        - log: "Error while sending a message: ${result.error}"
+
+    ...
+
+    - task: slack
+      in:
+        channelId: "exampleId"
+        ts: ${result.ts}
+        username: "anyCustomString"
+        iconEmoji: ":information_desk_person:"
+        text: "Execution on Concord for process ID ${txId} completed."
 ```
 
 The `channelId` can be seen in the URL of the channel or alternatively the name
-of the channel can be used e.g. `C7HNUMYQ1` and `my-project-channel`.
+of the channel can be used e.g. `C7HNUMYQ1` and `my-project-channel`. To send a
+message to a specific user use `@handle` syntax:
+
+```yaml
+- task: slack
+  in:
+    channelId: "@someone"
+    text: "Hi there!"
+```
+
+Not that `@handle` works only for users that did not change their _Display Name_
+in their Slack profiles.
 
 Optionally, the message sender name appearing as the user submitting the post,
 can be changed with `username`.  In addition, the optional `iconEmoji` can
 configure the icon to use for the post.
+
+The task returns a `result` object with three fields:
+
+- `ok` - `true` if the operation succeeded;
+- `error` - error message if the operation failed.
+- `ts` -  Timestamp ID of the message that was posted, can be used, in the
+  following slack task of posting message, to make the message a reply.
+
+The optional field from the result object `ts` can be used to create
+a thread and reply. Avoid using a reply's `ts` value; use it's parent instead.
 
 ## Slack Channel Task
 

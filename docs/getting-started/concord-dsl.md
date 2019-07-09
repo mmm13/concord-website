@@ -12,12 +12,15 @@ readable format [YAML](http://www.yaml.org/) and defines all your workflow
 process flows, configuration, forms and other aspects:
 
 - [Example](#example)
-- [Project Configuration in `configuration`](#configuration)
+- [Process Configuration in `configuration`](#configuration)
   - [Entry Point](#entry-point)
   - [Dependencies](#dependencies)
   - [Template](#template)
   - [Arguments](#arguments)
+  - [Process Timeout](#timeout)
   - [Debug](#debug)
+  - [Metadata](#metadata)
+  - [Runner](#runner)
 - [Process Definitions in `flows:`](#flows)
   - [Entry points](#entry-points)
   - [Execution steps](#execution-steps)
@@ -31,8 +34,8 @@ process flows, configuration, forms and other aspects:
   - [Retry Tasks](#retry-task)
   - [Throwing exceptions](#throw-step)
   - [Setting variables](#set-step)
-  - [Checkpoints](#checkpoints)
 - [Named Profiles in `profiles`](#profiles)
+- [Separate Concord Folder Usage](#concord-folder)
 
 Some features are more complex and you can find details in separate documents:
 
@@ -48,7 +51,8 @@ Additional features are available by using tasks available in a
 ```yaml
 flows:
   default:
-    - log: "Getting started now"
+    - log: "Going to to send an email..."
+
     - task: sendEmail                               # (1)
       in:
         to: me@localhost.local
@@ -56,12 +60,13 @@ flows:
       out:
         result: operationResult
       error:
-        - log: "email sending error"
+        - log: "Error while sending an email: ${lastError.cause.message}"
+
     - if: ${result.ok}                              # (2)
       then:
         - reportSuccess                             # (3)
       else:
-        - log: "Failed: ${lastError.message}"
+        - log: "Failed: ${lastError.cause.message}"
 
   reportSuccess:
     - ${dbBean.updateStatus(result.id, "SUCCESS")}; # (4)
@@ -81,7 +86,7 @@ The actual task names and their required parameters may differ. Please refer to
 the [task documentation](./tasks.html) and the specific task used for details.
 
 <a name="configuration"/>
-## Project Configuration in `configuration`
+## Process Configuration in `configuration`
 
 Overall configuration for the project and process executions are contained in the
 `configuration:` top level element of the Concord file:
@@ -236,6 +241,36 @@ A variable's value can be [defined or modified with the set step](#set-step) and
 [number of variables](./processes.html#variables) are automatically set in each
 process and available for usage.
 
+<a name="timeout"/>
+
+### Process Timeout
+
+You can specify the maximum amount of time the process can spend in the running
+state with the `processTimeout` configuration. It can be useful to set
+specific SLAs for deployment jobs or to use it as a global timeout:
+
+```yaml
+configuration:
+  processTimeout: "PT1H"
+flows:
+  default:
+  # a long running process
+```
+
+In the example above, if the process runs for more than 1 hour it is
+automatically cancelled and marked as _timed out_.
+
+The parameter accepts duration in the
+[ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format.
+
+A special `onTimeout` flow can be used to handle such processes:
+
+```yaml
+flows:
+  onTimeout:
+  - log: "I'm going to run when my parent process times out"
+```
+
 ### Debug
 
 Enabling the `debug` configuration option causes Concord to log paths of all
@@ -246,6 +281,143 @@ configuration:
   debug: true
 ```
 
+### Metadata
+
+Flows can expose internal variables as process metadata. Such metadata can be
+retrieved using the [API](../api/process.html#status) or displayed in the process
+list in [Concord Console](../console/process.html#metadata).
+
+```yaml
+configuration:
+  meta:
+    myValue: "n/a" # initial value
+
+flows:
+  default:
+  - set:
+      myValue: "hello!"
+```
+
+After each step, Concord sends the updated value back to the server:
+
+```bash
+$ curl -skn http://concord.example.com/api/v1/process/1c50ab2c-734a-4b64-9dc4-fcd14637e36c | jq '.meta.myValue'
+"hello!"
+```
+
+Nested variables and forms are also supported:
+
+```yaml
+configuration:
+  meta:
+    nested.value: "n/a"
+
+flows:
+  default:
+  - set:
+      nested:
+        value: "hello!"
+```
+
+The value is stored under the `nested.value` key:
+
+```bash
+$ curl -skn http://concord.example.com/api/v1/process/1c50ab2c-734a-4b64-9dc4-fcd14637e36c | jq '.meta.["nested.value"]'
+"hello!"
+```
+
+Example with a form:
+
+```yaml
+configuration:
+  meta:
+    myForm.myValue: "n/a"
+
+flows:
+  default:
+  - form: myForm
+    fields:
+    - myValue: { type: "string" }
+```
+### Runner
+
+[Concord Runner]({{ site.concord_source }}tree/master/runner) is
+the name of the default runtime used for actual execution of processes. Its
+parameters can be configured in the `runner` section of the `configuration`
+object. Here is an example of the default configuration:
+
+```yaml
+configuration:
+  runner:
+    debug: false
+    logLevel: "INFO"
+    events:
+      recordTaskInVars: false
+      inVarsBlacklist:
+        - "password"
+        - "apiToken"
+        - "apiKey"
+
+      recordTaskOutVars: false
+      outVarsBlacklist: []
+```
+
+- `debug` - enables additional debug logging, `true` if `configuration.debug`
+  enabled;
+- `logLevel` - [logging level](https://logback.qos.ch/manual/architecture.html#effectiveLevel)
+  for the `log` task;
+- `events` - the process event recording parameters:
+  - `recordTaskInVars` - enable or disable recording of input variables in task
+    calls;
+  - `inVarsBlacklist` - list of variable names that must not be recorded if
+    `recordTaskInVars` is `true`;
+  - `recordTaskOutVars` - enable or disable recording of output variables in
+    task calls;
+  - `outVarsBlacklist` - list of variable names that must not be recorded if
+    `recordTaskInVars` is `true`.
+
+See the [Process Events](./processes.html#process-events) section for more
+details about the process event recording.
+
+### Runner
+
+[Concord Runner]({{ site.concord_source }}tree/master/runner) is
+the name of the default runtime used for actual execution of processes. Its
+parameters can be configured in the `runner` section of the `configuration`
+object. Here is an example of the default configuration:
+
+```yaml
+configuration:
+  runner:
+    debug: false
+    logLevel: "INFO"
+    events:
+      recordTaskInVars: false
+      inVarsBlacklist:
+        - "password"
+        - "apiToken"
+        - "apiKey"
+
+      recordTaskOutVars: false
+      outVarsBlacklist: []
+```
+
+- `debug` - enables additional debug logging, `true` if `configuration.debug`
+  enabled;
+- `logLevel` - [logging level](https://logback.qos.ch/manual/architecture.html#effectiveLevel)
+  for the `log` task;
+- `events` - the process event recording parameters:
+  - `recordTaskInVars` - enable or disable recording of input variables in task
+    calls;
+  - `inVarsBlacklist` - list of variable names that must not be recorded if
+    `recordTaskInVars` is `true`;
+  - `recordTaskOutVars` - enable or disable recording of output variables in
+    task calls;
+  - `outVarsBlacklist` - list of variable names that must not be recorded if
+    `recordTaskInVars` is `true`.
+
+See the [Process Events](./processes.html#process-events) section for more
+details about the process event recording.
 
 <a name="flows"/>
 
@@ -618,17 +790,13 @@ flows:
   - log: "Yep, we just did"
 ```
 
-In both cases, the server starts a \"child\" process with a copy of
+In both cases, the server starts a _child_ process with a copy of
 the original process state and uses `onCancel` or `onFailure` as an
 entry point.
 
-**Note**: If a process was never suspended (e.g. had no forms or no
-forms were submitted), then `onCancel`/`onFailures` receive a
-copy of the initial state of a process, which was created when the
-original process was started by the server.
-
-This means that no changes in the process state before suspension
-will be visible to the \"child\" processes:
+**Note:** `onCancel` and `onFailure` handlers receive the last known
+state of the parent process' variables. This means that changes in
+the process state are visible to the _child_ processes:
 
 ```yaml
 flows:
@@ -641,17 +809,43 @@ flows:
   - log: "The default flow got ${myVar}"
 
   # ...and then crash the process
-  - ${misc.throwBpmnError('Boom!')}
+  - throw: "Boom!"
 
   onFailure:
-  # will log "I've got abc"
-  - log: "And I've got ${myVar}"
+  # will log "I've got xyz"
+  - log: "I've got ${myVar}"
 
 configuration:
   arguments:
     # original value
     myVar: "abc"
 ```
+
+In addition, `onFailure` flow receives `lastError` variable which
+contains the parent process' last (unhandled) error:
+
+```yaml
+flows:
+  default:
+  - throw: "Kablam!"
+        
+  onFailure:
+  - log: "${lastError.cause}"
+``` 
+
+Nested data is also supported:
+```yaml
+flows:
+  default:
+  - throw:
+      myCause: "I wanted to"
+      whoToBlame:
+        mainCulpit: "${currentUser.username}"
+        
+  onFailure:
+  - log: "The parent process failed because ${lastError.cause.payload.myCause}."
+  - log: "And ${lastError.cause.payload.whoToBlame.mainCulpit} is responsible for it!"
+```  
 
 <a name="retry-task"/>
 
@@ -794,10 +988,32 @@ checkpoint's step. For example, if the process is restored using `first`
 checkpoint, all steps starting from `Continuing the process...`
 message and further are executed.
 
+Checkpoint names can contain expressions:
+```yaml
+configuration:
+  arguments:
+    checkpointSuffix: "checkpoint"
+
+flows:
+  default:
+  - log: "Before the checkpoint"
+  - checkpoint: "first_${checkpointSuffix}"
+  - log: "After the checkpoint"
+```
+
+Checkpoint names must start with a (latin) letter or a digit, can contain
+whitespace, underscores `_`, `@`, dots `.`, minus signs `-` and tildes `~`.
+The length must be between 2 and 128 characters. Here's the regular expression
+used for validation:
+
+```
+^[0-9a-zA-Z][0-9a-zA-Z_@.\\-~ ]{1,128}$
+```
+
 Only process initiators, administrators and users with `WRITER` access level to
 the process' project can restore checkpoints with the API or the user console.
 
-**Note**: files created during the process' execution are not saved during the
+**Note:** files created during the process' execution are not saved during the
 checkpoint creation.
 
 <a name="profiles"/>
@@ -875,3 +1091,47 @@ $ curl ... -F activeProfiles=a,b http://concord.example.com/api/v1/process
 
 In this example, values from `b` are merged with the result of the merge
 of `a` and the default configuration.
+
+<a name="concord-folder"/>
+## Separate Concord Folder Usage
+
+The default use case with the Concord DSL is to maintain everything in the one
+`concord.yml` file. The usage of a `concord` folder and files within it allows
+you to reduce the individual file sizes.
+
+
+`./concord/test.yml`:
+
+```yaml
+configuration:
+  arguments:
+    nested:
+      name: "stranger"
+flows:
+  default:
+  - log: "Hello, ${nested.name}!"
+```
+  
+`./concord.yml`:
+
+```yaml
+configuration:
+  arguments:
+    nested:
+      name: "Concord"
+```
+
+The above example printss out `Hello, Concord!`, when running the default flow.
+
+Concord folder merge rules:
+
+- Files are loaded in alphabetical order, including subdirectories.
+- Flows and forms with the same names are overridden by their counterpart from
+  the files loaded previously.
+- All triggers from all files are added together. If there are multiple trigger
+  definitions across several files, the resulting project contains all of
+  them.
+- Configuration values are merged. The values from the last loaded file override
+  the values from the files loaded earlier.
+- Profiles with flows, forms and configuration values are merged according to
+  the rules above.

@@ -22,9 +22,11 @@ docker run -d -p 5432:5432 --name db -e 'POSTGRES_PASSWORD=q1' library/postgres:
 
 ## Running from an IDE
 
+You need to [build](#building) the project before you can load it into an IDE.
+
 It is possible to start the server and an agent directly from an IDE using the
 following main classes:
-- concord-server: `com.walmartlabs.concord.server.Main`
+- concord-server: `com.walmartlabs.concord.server.dist.Main`
 - concord-agent: `com.walmartlabs.concord.agent.Main`
 
 The server requires a configuration file to start. Set `ollie.conf` JVM
@@ -65,7 +67,7 @@ This method is suitable only for local development.
 
 To skip NPM-related tasks when building the project:
 ```
-./mvnw clean install -DskipTests -DskipNpmInstall -DskipNpmBuild
+./mvnw clean install -DskipTests -DskipNpm
 ```
 
 ## Making a Release
@@ -158,10 +160,10 @@ Assuming that Concord Server is already running in a `server` container.
    adding new entry "cn=myuser,dc=example,dc=org"
    ```
 
-6. use `myuser` and `q1` to authenticate in the Console:
+6. use `myuser` and `q1` to authenticate in the [Concord Console](../console/index.html):
 
-   ![Login](/assets/img/screenshots/oldap-login.png)
+   ![Login](/assets/img/screenshots/login.png)
   
 7. after successful authentication, you should see the UI similar to this: 
 
-   ![Success](/assets/img/screenshots/oldap-success.png)
+   ![Success](/assets/img/screenshots/initial-view.png)

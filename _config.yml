@@ -4,7 +4,7 @@
 # Any variable here is referenced in layouts/pages as {{site.XXX}} so something like {{site.googleId}}
 # ----------------------------------------------------------------------------------------------------------------------
 
-id: walmart
+id: concord
 name: Concord
 domain: concord.walmartlabs.com
 url: https://concord.walmartlabs.com
@@ -17,25 +17,39 @@ display-search-in-header: true
 custom-footer: false
 contribute: true
 edit-on-github: true
-matomo-analytics: true
+matomo-analytics: false
 matomo-site-id: 11
 
 concord_source: "https://github.com/walmartlabs/concord/"
 concord_plugins_source: "https://github.com/walmartlabs/concord-plugins/"
-concord_plugins_version: "0.78.0"
-concord_core_version: "1.2.2"
-concord_ansible_version: "2.6.10"
+concord_plugins_version: "1.11.0"
+concord_core_version: "1.21.0"
+concord_ansible_version: "2.6.16"
 
 navigation:
+  - title: OVERVIEW
+    url: /overview/index.html
+    context: /overview/
   - title: DOCS
     url: /docs/index.html
     context: /docs/
   - title: TRAINING
     url: /training.html
     context: /training
-  - title: ABOUT
-    url: /about.html
-    context: /about
+
+projects:
+ - title: About Concord
+   url: /overview/index.html
+ - title: Benefits
+   url: /overview/benefits.html
+ - title: Case Study - Ansible at Scale
+   url: /overview/case-study-ansible.html
+ - title: Case Study - Managed Services
+   url: /overview/case-study-managed-services.html
+ - title: Case Study - Continuous Deployment
+   url: /overview/case-study-cd.html
+ - title: Code & Contribute
+   url: /overview/contribute.html
 
 defaults:
   -
@@ -80,4 +94,3 @@ exclude:
   - "publish.sh"
   - "sonar*"
   - "vendor"
-
